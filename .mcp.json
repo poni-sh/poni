@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "poni": {
+      "command": "poni",
+      "args": [
+        "serve"
+      ],
+      "type": "stdio"
+    }
+  }
+}

@@ -1,0 +1,112 @@
+[poni]
+version = "0.1.0"
+detected = ["python", "ruff", "mypy", "pytest"]
+
+[secrets]
+source = "env"
+
+[enforcement]
+enabled = true
+parallel = true
+
+[cli.git]
+command = "git"
+
+[cli.gh]
+command = "gh"
+description = "GitHub CLI"
+
+[cli.gh.policies]
+allow_subcommands = ["pr"]
+deny_patterns = ["merge"]
+
+[cli.aws]
+command = "aws"
+description = "AWS CLI"
+
+[cli.aws.policies]
+allow_subcommands = ["help"]
+deny_subcommands = ["iam", "organizations"]
+deny_patterns = ["--recursive.*delete"]
+interactive_patterns = ["delete", "remove"]
+redact_patterns = ["AccessKeyId", "SecretAccessKey"]
+
+[tools.hello]
+description = "Say hello"
+command = "bash"
+args = ["scripts/hello.sh"]
+confirm = false
+allowed_branches = ["main", "release/*"]
+timeout = 300
+
+[[enforcement.rules]]
+name = "ruff-check"
+trigger = "pre-commit"
+command = "ruff check --fix ${files}"
+pattern = "**/*.py"
+staged_only = true
+auto_stage = true
+
+[[enforcement.rules]]
+name = "ruff-format"
+trigger = "pre-commit"
+command = "ruff format ${files}"
+pattern = "**/*.py"
+staged_only = true
+auto_stage = true
+
+[[enforcement.rules]]
+name = "mypy"
+trigger = "pre-push"
+command = "mypy ."
+
+[[enforcement.rules]]
+name = "test"
+trigger = "pre-push"
+command = "pytest"
+
+[[enforcement.rules]]
+name = "no-print"
+trigger = "pre-commit"
+check = "pattern-absent"
+pattern = "src/**/*.py"
+exclude = ["**/test_*.py", "**/*_test.py", "**/conftest.py"]
+deny_pattern = "^\\s*print\\("
+message = "Use logging instead of print statements"
+
+[[enforcement.rules]]
+name = "no-breakpoint"
+trigger = "pre-commit"
+check = "pattern-absent"
+pattern = "src/**/*.py"
+exclude = ["**/presets/**/*.py"]
+deny_pattern = "^\\s*breakpoint\\(\\)"
+message = "Remove breakpoint() before committing"
+
+[lifecycle]
+enabled = true
+
+[[lifecycle.hooks]]
+name = "post-write-ruff"
+trigger = "after_tool:filesystem.write_file"
+pattern = "**/*.py"
+commands = ["ruff check --fix ${file}", "ruff format ${file}"]
+
+[[lifecycle.hooks]]
+name = "post-write-mypy"
+trigger = "after_tool:filesystem.write_file"
+pattern = "**/*.py"
+commands = ["mypy ${file}"]
+block_until_pass = true
+message = "Fix type errors before continuing"
+
+[[lifecycle.hooks]]
+name = "verify-before-done"
+trigger = "before_response"
+commands = ["mypy ."]
+block_until_pass = true
+message = "All checks must pass before completing"
+
+[memory]
+enabled = true
+max_entries_in_context = 20
