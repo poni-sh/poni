@@ -1,8 +1,5 @@
 """Tests for Pydantic configuration models."""
 
-import pytest
-from pydantic import ValidationError
-
 from poni.config.models import (
     CliConfig,
     CliPoliciesConfig,
