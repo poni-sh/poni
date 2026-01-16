@@ -1,0 +1,42 @@
+# poni
+
+Safe Batteries Included Agentic Development
+
+## Summary
+
+Poni is a local-first git-friendly agentic development tool for your entire team.
+
+## Features
+
+- Control agent tool usage with policies (prevent destructive calls).
+- Define agentic tools.
+- Auto-generate and maintain consistent documentation.
+- Organize your team's shared development memory.
+
+### Premium Features
+
+- Usage audit
+- One-click integration setup
+- Pre-configured role-based policies
+
+## CLI
+
+- `poni init` - Initialize poni in the current directory.
+- `poni serve` - ...
+- `poni run PROMPT` - ...
+- `poni docs` - Generate documentation for your repository.
+- `poni auth` - Authenticate with our server for premium and enterprise features.
+
+## Details
+
+Poni is a CLI tool and MCP server that provides governance, shared knowledge, and team tooling for agentic development.
+It acts as the complete control plane for AI agents in development workflows.
+
+
+## Contributing
+
+### Tech Stack
+
+- [uv](https://github.com/astral-sh/uv) - An extremely fast Python package and project manager, written in Rust.
+- [fastmcp](https://github.com/jlowin/fastmcp) - The fast, Pythonic way to build MCP servers and clients.
+- [typer](https://github.com/fastapi/typer) - Library for building CLI applications that users will love using and developers will love creating.
