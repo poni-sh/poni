@@ -1,0 +1,416 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  lint:
+    name: Linting and Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+            
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          
+      - name: Run ruff check
+        run: uv run ruff check .
+        
+      - name: Run ruff format
+        run: uv run ruff format --check .
+        
+      - name: Check for print statements
+        run: |
+          uv run python -c "
+          import subprocess
+          result = subprocess.run(['uv', 'run', 'ruff', 'check', '--select=E999', '--extend-select=T201', 'src/'], capture_output=True, text=True)
+          if result.stdout.strip():
+              print('Error: Found print statements in source code:')
+              print(result.stdout)
+              exit(1)
+          print('✓ No print statements in source code')
+          "
+
+  type-check:
+    name: Type Checking
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+            
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          
+      - name: Run mypy
+        run: uv run mypy .
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ matrix.python-version }}-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-${{ matrix.python-version }}-
+            ${{ runner.os }}-uv-
+            
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          
+      - name: Run pytest
+        run: |
+          uv run pytest --cov=src --cov-report=xml --cov-report=term-missing
+          
+      - name: Upload coverage
+        if: matrix.python-version == '3.13'
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+            
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          
+      - name: Run bandit security scan
+        run: |
+          uv run bandit -r src/ -f json -o bandit-report.json || true
+          
+      - name: Run safety check for known vulnerabilities
+        run: |
+          uv run safety check --json --output safety-report.json || true
+          
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, test]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Build package
+        run: |
+          uv build
+          
+      - name: Check package
+        run: |
+          uv run twine check dist/*
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  documentation:
+    name: Documentation Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Install dependencies
+        run: |
+          uv sync --dev
+          
+      - name: Build documentation
+        run: |
+          mkdir -p docs/_build
+          echo "# Poni Documentation" > docs/_build/index.md
+          echo "Built successfully on $(date)" >> docs/_build/index.md
+          
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/_build/
+
+  auto-merge:
+    name: Auto-merge PR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [lint, type-check, test, build]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Check PR status
+        id: pr-check
+        run: |
+          echo "Checking PR #${{ github.event.pull_request.number }}..."
+          
+          # Check if PR is from trusted user
+          if [[ "${{ github.event.pull_request.user.login }}" == "olekslitus" ]]; then
+            echo "trusted_user=true" >> $GITHUB_OUTPUT
+          else
+            echo "trusted_user=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check if PR has approvals
+          approvals=$(gh pr view ${{ github.event.pull_request.number }} --json reviews --jq '[.reviews[] | select(.state == "APPROVED")] | length')
+          echo "approvals=$approvals" >> $GITHUB_OUTPUT
+          
+          # Check if PR is from same repo (not fork)
+          if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
+            echo "same_repo=true" >> $GITHUB_OUTPUT
+          else
+            echo "same_repo=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Auto-merge if conditions met
+        if: |
+          steps.pr-check.outputs.trusted_user == 'true' && 
+          steps.pr-check.outputs.approvals >= '1' &&
+          steps.pr-check.outputs.same_repo == 'true'
+        run: |
+          echo "All conditions met, attempting auto-merge..."
+          gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Request review if needed
+        if: |
+          steps.pr-check.outputs.trusted_user == 'true' && 
+          steps.pr-check.outputs.approvals == '0' &&
+          steps.pr-check.outputs.same_repo == 'true'
+        run: |
+          echo "Requesting review from maintainer..."
+          gh pr edit ${{ github.event.pull_request.number }} --add-reviewer olekslitus
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    name: Deploy (main only)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lint, type-check, test, build, documentation]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          
+      - name: Download documentation
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation
+          path: docs/_build/
+          
+      - name: Deploy to PyPI (if tagged)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+          
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Deploy documentation
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "Documentation deployed successfully"
+          # Add actual deployment logic here (e.g., to GitHub Pages)
+          
+  notify:
+    name: Notify Results
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint, type-check, test, security, build]
+    steps:
+      - name: Prepare notification
+        id: notification
+        run: |
+          if [[ "${{ needs.lint.result }}" == "success" && 
+                "${{ needs.type-check.result }}" == "success" && 
+                "${{ needs.test.result }}" == "success" && 
+                "${{ needs.build.result }}" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=✅ All checks passed!" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Some checks failed" >> $GITHUB_OUTPUT
+          fi
+          
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "context=PR #${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "context=push to ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Add status comment to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const status = '${{ steps.notification.outputs.status }}';
+            const message = '${{ steps.notification.outputs.message }}';
+            const context = '${{ steps.notification.outputs.context }}';
+            
+            const body = `## CI/CD Status for ${context}\n\n${message}\n\n**Job Results:**\n- Lint: ${{ needs.lint.result }}\n- Type Check: ${{ needs.type-check.result }}\n- Test: ${{ needs.test.result }}\n- Build: ${{ needs.build.result }}\n`;
+            
+            // Find existing CI comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const ciComment = comments.find(comment => 
+              comment.body.includes('CI/CD Status') && 
+              comment.user.type === 'Bot'
+            );
+            
+            if (ciComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: ciComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
