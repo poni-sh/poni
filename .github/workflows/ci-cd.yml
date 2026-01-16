@@ -240,62 +240,7 @@ jobs:
           name: documentation
           path: docs/_build/
 
-  auto-merge:
-    name: Auto-merge PR
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    needs: [lint, type-check, test, build]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Check PR status
-        id: pr-check
-        run: |
-          echo "Checking PR #${{ github.event.pull_request.number }}..."
-          
-          # Check if PR is from trusted user
-          if [[ "${{ github.event.pull_request.user.login }}" == "olekslitus" ]]; then
-            echo "trusted_user=true" >> $GITHUB_OUTPUT
-          else
-            echo "trusted_user=false" >> $GITHUB_OUTPUT
-          fi
-          
-          # Check if PR has approvals
-          approvals=$(gh pr view ${{ github.event.pull_request.number }} --json reviews --jq '[.reviews[] | select(.state == "APPROVED")] | length')
-          echo "approvals=$approvals" >> $GITHUB_OUTPUT
-          
-          # Check if PR is from same repo (not fork)
-          if [[ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]]; then
-            echo "same_repo=true" >> $GITHUB_OUTPUT
-          else
-            echo "same_repo=false" >> $GITHUB_OUTPUT
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Auto-merge if conditions met
-        if: |
-          steps.pr-check.outputs.trusted_user == 'true' && 
-          steps.pr-check.outputs.approvals >= '1' &&
-          steps.pr-check.outputs.same_repo == 'true'
-        run: |
-          echo "All conditions met, attempting auto-merge..."
-          gh pr merge ${{ github.event.pull_request.number }} --squash --delete-branch
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Request review if needed
-        if: |
-          steps.pr-check.outputs.trusted_user == 'true' && 
-          steps.pr-check.outputs.approvals == '0' &&
-          steps.pr-check.outputs.same_repo == 'true'
-        run: |
-          echo "Requesting review from maintainer..."
-          gh pr edit ${{ github.event.pull_request.number }} --add-reviewer olekslitus
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
 
   deploy:
     name: Deploy (main only)

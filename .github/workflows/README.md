@@ -38,22 +38,15 @@ This directory contains the GitHub Actions workflow for automated testing, valid
 - Builds documentation
 - Uploads documentation artifacts
 
-### 7. Auto-merge
-- **Only runs on PRs**
-- Checks conditions:
-  - PR is from trusted user (olekslitus)
-  - PR has at least 1 approval
-  - PR is from same repository (not fork)
-- If conditions met: Auto-merges with squash
-- If from trusted user but no approval: Requests review
 
-### 8. Deploy
+
+### 7. Deploy
 - **Only runs on main branch pushes**
 - Deploys to PyPI if tagged
 - Creates GitHub releases for tags
 - Deploys documentation
 
-### 9. Notify
+### 8. Notify
 - Comments on PRs with CI/CD status
 - Provides summary of all job results
 - Updates existing comments or creates new ones
@@ -71,12 +64,3 @@ For full functionality, these GitHub repository secrets are needed:
 - `PYPI_TOKEN`: For publishing to PyPI
 - (Optional) Other deployment tokens
 
-## Auto-merge Policy
-
-The auto-merge job follows a safe approach:
-1. Only merges from trusted users
-2. Requires at least one approval
-3. Only works for same-repo PRs (no forks)
-4. Uses squash merge to keep history clean
-
-This ensures code quality while maintaining security.
