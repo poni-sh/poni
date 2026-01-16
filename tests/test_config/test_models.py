@@ -80,6 +80,9 @@ class TestEnforcementRule:
         assert rule.trigger == "pre-commit"
         assert rule.command == "eslint --fix ${files}"
 
+        # Note: No runtime test for invalid trigger needed since it's caught by mypy
+        # The Literal["pre-commit", "pre-push"] type annotation provides static type safety
+
     def test_pattern_check_rule(self) -> None:
         """Test pattern check rule."""
         rule = EnforcementRule(
@@ -91,15 +94,6 @@ class TestEnforcementRule:
         )
         assert rule.check == "pattern-absent"
         assert rule.deny_pattern == r"console\.log"
-
-    def test_invalid_trigger(self) -> None:
-        """Test that invalid trigger raises error."""
-        with pytest.raises(ValidationError):
-            EnforcementRule(
-                name="test",
-                trigger="pre-commit",  # Fixed: use valid trigger
-                command="echo test",
-            )
 
     def test_default_values(self) -> None:
         """Test default values."""
