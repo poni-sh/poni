@@ -48,13 +48,13 @@ def executor(rule_config: Config) -> RuleExecutor:
 class TestRuleResult:
     """Tests for RuleResult dataclass."""
 
-    def test_success_result(self):
+    def test_success_result(self) -> None:
         """Test successful result."""
         result = RuleResult(rule_name="test", success=True)
         assert result.success
         assert result.rule_name == "test"
 
-    def test_failure_result(self):
+    def test_failure_result(self) -> None:
         """Test failure result with output."""
         result = RuleResult(
             rule_name="test",
@@ -68,7 +68,7 @@ class TestRuleResult:
 class TestCommandRules:
     """Tests for command-based rules."""
 
-    def test_successful_command(self, executor: RuleExecutor):
+    def test_successful_command(self, executor: RuleExecutor) -> None:
         """Test successful command execution."""
         rule = EnforcementRule(
             name="echo",
@@ -79,7 +79,7 @@ class TestCommandRules:
         assert result.success
         assert "hello" in result.output
 
-    def test_failing_command(self, executor: RuleExecutor):
+    def test_failing_command(self, executor: RuleExecutor) -> None:
         """Test failing command execution."""
         rule = EnforcementRule(
             name="fail",
@@ -89,7 +89,7 @@ class TestCommandRules:
         result = executor.run_rule(rule)
         assert not result.success
 
-    def test_file_substitution(self, executor: RuleExecutor, tmp_path: Path):
+    def test_file_substitution(self, executor: RuleExecutor, tmp_path: Path) -> None:
         """Test ${files} substitution."""
         test_file = tmp_path / "test.py"
         test_file.write_text("print('test')")
@@ -104,7 +104,7 @@ class TestCommandRules:
         assert result.success
         assert "print" in result.output
 
-    def test_skip_when_no_matching_files(self, executor: RuleExecutor):
+    def test_skip_when_no_matching_files(self, executor: RuleExecutor) -> None:
         """Test that rule is skipped when no files match pattern."""
         rule = EnforcementRule(
             name="check",
@@ -119,7 +119,7 @@ class TestCommandRules:
 class TestPatternRules:
     """Tests for pattern-based rules."""
 
-    def test_pattern_absent_pass(self, executor: RuleExecutor, tmp_path: Path):
+    def test_pattern_absent_pass(self, executor: RuleExecutor, tmp_path: Path) -> None:
         """Test pattern-absent passes when pattern not found."""
         test_file = tmp_path / "test.py"
         test_file.write_text("def foo(): pass")
@@ -134,7 +134,7 @@ class TestPatternRules:
         result = executor.run_rule(rule, files=[str(test_file)])
         assert result.success
 
-    def test_pattern_absent_fail(self, executor: RuleExecutor, tmp_path: Path):
+    def test_pattern_absent_fail(self, executor: RuleExecutor, tmp_path: Path) -> None:
         """Test pattern-absent fails when pattern found."""
         test_file = tmp_path / "test.py"
         test_file.write_text("print('hello')")
@@ -151,7 +151,7 @@ class TestPatternRules:
         assert not result.success
         assert "No print statements" in result.output
 
-    def test_pattern_respects_exclude(self, executor: RuleExecutor, tmp_path: Path):
+    def test_pattern_respects_exclude(self, executor: RuleExecutor, tmp_path: Path) -> None:
         """Test that exclude patterns are respected."""
         test_file = tmp_path / "test_foo.py"
         test_file.write_text("print('test')")  # Would normally fail
@@ -171,12 +171,12 @@ class TestPatternRules:
 class TestRunAll:
     """Tests for running all rules."""
 
-    def test_run_all_for_trigger(self, executor: RuleExecutor):
+    def test_run_all_for_trigger(self, executor: RuleExecutor) -> None:
         """Test running all rules for a trigger."""
         results = executor.run_all("pre-commit")
         assert len(results) == 3  # All pre-commit rules
 
-    def test_filters_by_trigger(self, executor: RuleExecutor):
+    def test_filters_by_trigger(self, executor: RuleExecutor) -> None:
         """Test that rules are filtered by trigger."""
         # Add a pre-push rule to config
         executor.enforcement.rules.append(
@@ -192,7 +192,7 @@ class TestRunAll:
         assert len(pre_push) == 1
         assert pre_push[0].rule_name == "push-only"
 
-    def test_skips_disabled_rules(self, executor: RuleExecutor):
+    def test_skips_disabled_rules(self, executor: RuleExecutor) -> None:
         """Test that disabled rules are skipped."""
         executor.enforcement.rules[0].enabled = False
         results = executor.run_all("pre-commit")
@@ -202,7 +202,7 @@ class TestRunAll:
 class TestPackageManagerSubstitution:
     """Tests for package manager substitution."""
 
-    def test_npm_substitution(self):
+    def test_npm_substitution(self) -> None:
         """Test npm commands are substituted."""
         config = Config(
             poni=PoniConfig(package_manager="pnpm"),
