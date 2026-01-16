@@ -1,6 +1,7 @@
 """Tests for memory store."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -9,7 +10,7 @@ from poni.memory.store import MemoryStore
 
 
 @pytest.fixture
-def memory_config(tmp_path: Path, monkeypatch) -> Config:
+def memory_config(tmp_path: Path, monkeypatch: Any) -> Config:
     """Create a config for memory testing."""
     # Create .poni/memory directory
     poni_dir = tmp_path / ".poni"
@@ -42,19 +43,19 @@ def store(memory_config: Config) -> MemoryStore:
 class TestMemoryStore:
     """Tests for MemoryStore class."""
 
-    def test_list_empty(self, store: MemoryStore):
+    def test_list_empty(self, store: MemoryStore) -> None:
         """Test listing when no entries exist."""
         entries = store.list_entries()
         assert entries == []
 
-    def test_add_entry(self, store: MemoryStore):
+    def test_add_entry(self, store: MemoryStore) -> None:
         """Test adding a memory entry."""
         entry = store.add("Test pattern", category="patterns")
         assert entry.id == "pat-001"
         assert entry.content == "Test pattern"
         assert entry.category == "patterns"
 
-    def test_add_multiple_entries(self, store: MemoryStore):
+    def test_add_multiple_entries(self, store: MemoryStore) -> None:
         """Test adding multiple entries generates unique IDs."""
         entry1 = store.add("Pattern 1", category="patterns")
         entry2 = store.add("Pattern 2", category="patterns")
@@ -64,7 +65,7 @@ class TestMemoryStore:
         assert entry2.id == "pat-002"
         assert entry3.id == "dec-001"
 
-    def test_list_entries(self, store: MemoryStore):
+    def test_list_entries(self, store: MemoryStore) -> None:
         """Test listing all entries."""
         store.add("Pattern 1", category="patterns")
         store.add("Decision 1", category="decisions")
@@ -72,7 +73,7 @@ class TestMemoryStore:
         entries = store.list_entries()
         assert len(entries) == 2
 
-    def test_list_by_category(self, store: MemoryStore):
+    def test_list_by_category(self, store: MemoryStore) -> None:
         """Test filtering by category."""
         store.add("Pattern 1", category="patterns")
         store.add("Pattern 2", category="patterns")
@@ -82,7 +83,7 @@ class TestMemoryStore:
         assert len(patterns) == 2
         assert all(e.category == "patterns" for e in patterns)
 
-    def test_remove_entry(self, store: MemoryStore):
+    def test_remove_entry(self, store: MemoryStore) -> None:
         """Test removing an entry."""
         entry = store.add("To be removed", category="patterns")
         assert store.remove(entry.id) is True
@@ -90,11 +91,11 @@ class TestMemoryStore:
         entries = store.list_entries()
         assert len(entries) == 0
 
-    def test_remove_nonexistent(self, store: MemoryStore):
+    def test_remove_nonexistent(self, store: MemoryStore) -> None:
         """Test removing a nonexistent entry."""
         assert store.remove("pat-999") is False
 
-    def test_search_by_content(self, store: MemoryStore):
+    def test_search_by_content(self, store: MemoryStore) -> None:
         """Test searching entries by content."""
         store.add("Use async/await for IO", category="patterns")
         store.add("Prefer composition over inheritance", category="patterns")
@@ -104,7 +105,7 @@ class TestMemoryStore:
         assert len(results) == 2
         assert all("async" in e.content.lower() for e in results)
 
-    def test_search_by_context(self, store: MemoryStore):
+    def test_search_by_context(self, store: MemoryStore) -> None:
         """Test searching entries by context."""
         store.add("Pattern 1", category="patterns", context="Python specific")
         store.add("Pattern 2", category="patterns", context="JavaScript only")
@@ -113,14 +114,14 @@ class TestMemoryStore:
         assert len(results) == 1
         assert results[0].context == "Python specific"
 
-    def test_search_case_insensitive(self, store: MemoryStore):
+    def test_search_case_insensitive(self, store: MemoryStore) -> None:
         """Test that search is case insensitive."""
         store.add("Use UPPERCASE names", category="patterns")
 
         results = store.search("uppercase")
         assert len(results) == 1
 
-    def test_add_with_context(self, store: MemoryStore):
+    def test_add_with_context(self, store: MemoryStore) -> None:
         """Test adding entry with context."""
         entry = store.add(
             "Use dependency injection",
@@ -129,7 +130,7 @@ class TestMemoryStore:
         )
         assert entry.context == "For testability"
 
-    def test_add_with_files(self, store: MemoryStore):
+    def test_add_with_files(self, store: MemoryStore) -> None:
         """Test adding entry with file patterns."""
         entry = store.add(
             "Error handling pattern",
@@ -138,7 +139,7 @@ class TestMemoryStore:
         )
         assert entry.files == ["src/**/*.py"]
 
-    def test_get_relevant_respects_max(self, store: MemoryStore):
+    def test_get_relevant_respects_max(self, store: MemoryStore) -> None:
         """Test that get_relevant respects max_entries_in_context."""
         for i in range(20):
             store.add(f"Pattern {i}", category="patterns")
@@ -146,7 +147,7 @@ class TestMemoryStore:
         relevant = store.get_relevant()
         assert len(relevant) == 10  # max_entries_in_context
 
-    def test_get_relevant_when_disabled(self, store: MemoryStore):
+    def test_get_relevant_when_disabled(self, store: MemoryStore) -> None:
         """Test get_relevant when memory is disabled."""
         store.add("Pattern 1", category="patterns")
         store.config.enabled = False

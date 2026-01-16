@@ -139,7 +139,7 @@ def config_file(poni_dir: Path, sample_config: Config) -> Path:
 
 
 @pytest.fixture
-def temp_git_repo(tmp_path: Path) -> Generator[tuple[Path, git.Repo], None, None]:
+def temp_git_repo(tmp_path: Path) -> Generator[tuple[Path, "git.Repo"], None, None]:
     """Create a temporary git repository."""
     import git
 
